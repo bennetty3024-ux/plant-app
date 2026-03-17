@@ -1,105 +1,134 @@
-import streamlit as st
-from datetime import datetime, timedelta
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>나만의 정원 매니저 v3.0</title>
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; background-color: #f4f9f4; margin: 0; padding: 20px; color: #333; }
+        h1 { color: #2e7d32; text-align: center; }
+        .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        label { font-weight: bold; display: block; margin-top: 10px; color: #555; }
+        input[type="text"], select, textarea { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+        .checkbox-group { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 5px; }
+        .checkbox-group label { font-weight: normal; display: flex; align-items: center; margin-top: 0; }
+        .checkbox-group input { margin-right: 5px; }
+        button { background-color: #4caf50; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-size: 16px; width: 100%; margin-top: 15px; }
+        button:hover { background-color: #45a049; }
+        .plant-item { border-left: 5px solid #4caf50; padding-left: 15px; margin-bottom: 20px; background: #fafafa; padding: 15px; border-radius: 8px; }
+        .plant-name { font-size: 1.2em; font-weight: bold; color: #2e7d32; }
+        .tips { background: #e8f5e9; padding: 10px; border-radius: 6px; margin-top: 10px; font-size: 0.9em; }
+        .warning { color: #d32f2f; font-weight: bold; }
+        .calendar-btn { background-color: #4285F4; margin-top: 10px; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
 
-st.set_page_config(page_title="나만의 정원 매니저", page_icon="🌿", layout="wide")
+    <h1>🌿 나만의 정원 매니저 v3.0</h1>
 
-st.title("🌿 나만의 베란다 정원 매니저")
+    <div class="card">
+        <h3>새 식물/작업 등록</h3>
+        <label>식물 이름 (개체별)</label>
+        <input type="text" id="plantName" placeholder="예: 스카푸 1호, 금어초 파종이">
 
-# 1. 고정 메모: 환경 및 흙 배합 가이드
-with st.expander("📋 우리집 맞춤 흙 배합 & 환경 가이드 (터치해서 열기/닫기)", expanded=False):
-    st.markdown("""
-    **🏡 베란다 환경 참고:**
-    * 남향 3층, 소나무 그늘로 인한 반양지. 해가 완전히 다 들지 않으므로 과습 주의 및 통풍 철저!
+        <label>현재 단계</label>
+        <select id="plantStage" onchange="toggleRepottingFields()">
+            <option value="파종">파종</option>
+            <option value="정식" selected>정식 (분갈이)</option>
+            <option value="성장">성장</option>
+            <option value="개화">개화</option>
+        </select>
 
-    **📏 기본 흙 배합 (1리터 기준)**
-    * 반에그먼트 흙: 600ml
-    * 야생화초 흙: 300ml
-    * 훈탄: 100ml
-    * 마감프K(중소립): 2g
+        <div id="repottingFields">
+            <label>화분/흙 정보</label>
+            <input type="text" id="potInfo" placeholder="예: 9cm 화분 / 반에그먼트+야생화흙">
 
-    **🌸 사랑초 전용 흙 배합 (1리터 기준)**
-    * 바로커 흙: 600ml
-    * 야생화초 흙: 300ml
-    * 훈탄: 100ml
-    * 마감프K(중소립): 2g
-    """)
+            <label>투입 비료 및 방제 (다중 선택)</label>
+            <div class="checkbox-group">
+                <label><input type="checkbox" value="마감프K"> 마감프K</label>
+                <label><input type="checkbox" value="하이파 멀티코트"> 하이파 멀티코트</label>
+                <label><input type="checkbox" value="아그로믹파워"> 아그로믹파워</label>
+                <label><input type="checkbox" value="잭스 프로페셔널"> 잭스 프로페셔널</label>
+                <label><input type="checkbox" value="벅스킹"> 벅스킹(살충제)</label>
+            </div>
+        </div>
 
-# 2. 관리할 식물 및 영양제 리스트 데이터
-PLANTS = [
-    "미니신닌기아", "베고니아", "사랑초 (동형/옵투사)", "스트렙토카르푸스", 
-    "파종 모종 (금어초, 네메시아, 데모루 등)", "가든멈국화", 
-    "일본수국 (치쿠노카제, 미카노미즈토세 등)", "애기부용", "구근류 (튤립 등)", "기타"
-]
+        <label>개체별 특이사항 (메모)</label>
+        <textarea id="plantNote" rows="3" placeholder="이 개체만의 상태나 특징을 적어주세요."></textarea>
 
-FERTILIZERS = [
-    "주지 않음 (물만 줌)",
-    "잭스 프로페셔널 그로우",
-    "잭스 프로페셔널 블룸",
-    "하이파 멀티-마이크로 콤비",
-    "하이파 멀티코트 (6개월)",
-    "마감프K (중소립)",
-    "골드 아이언",
-    "오스모코트 (3-4개월)"
-]
+        <button onclick="addPlant()">기록 저장하기</button>
+    </div>
 
-st.divider()
+    <div class="card">
+        <h3>🌱 내 식물 관리 일지</h3>
+        <div id="plantList"></div>
+    </div>
 
-# 3. 식물 관리 기록 입력 섹션
-st.subheader("📝 오늘의 식물 관리 기록")
+    <script>
+        function toggleRepottingFields() {
+            const stage = document.getElementById('plantStage').value;
+            const repotFields = document.getElementById('repottingFields');
+            if(stage === '정식') {
+                repotFields.classList.remove('hidden');
+            } else {
+                repotFields.classList.add('hidden');
+            }
+        }
 
-col1, col2 = st.columns(2)
-with col1:
-    category = st.selectbox("🌱 식물 종류", PLANTS)
-    plant_name = st.text_input("🏷️ 개체 이름 (예: 애플블라썸 금어초 1호, 20cm 토피어리 애기부용)")
-    action_date = st.date_input("📅 관리 날짜", datetime.now())
+        function addPlant() {
+            const name = document.getElementById('plantName').value;
+            const stage = document.getElementById('plantStage').value;
+            const note = document.getElementById('plantNote').value;
+            let extras = "";
+            let tipsHTML = "";
+            let calLink = "";
 
-with col2:
-    action_type = st.selectbox("🛠️ 관리 내용", ["분갈이/가식", "파종", "가지치기/순지르기", "물/영양제 주기", "구근 수확", "잎꽂이/삽목"])
-    selected_fert = st.selectbox("💊 사용한 비료/영양제", FERTILIZERS)
-    fert_amount = st.text_input("💧 정확한 사용량 (예: 물 1리터에 1g, 화분 위 1티스푼)")
+            if (!name) { alert("식물 이름을 입력해주세요!"); return; }
 
-notes = st.text_area("✍️ 특이사항 메모 (예: 본잎이 3쌍 나옴, 뿌리가 화분에 꽉 참)")
+            // 다중 선택 비료 수집
+            let selectedFerts = [];
+            const checkboxes = document.querySelectorAll('#repottingFields input[type="checkbox"]:checked');
+            checkboxes.forEach((cb) => { selectedFerts.push(cb.value); });
 
-# 4. 스마트 일정 계산 및 알람
-if st.button("🚀 기록 저장 및 다음 일정 자동 계산"):
-    st.success(f"'{plant_name if plant_name else category}'의 관리가 기록되었습니다!")
-    
-    st.subheader("💡 다음 관리 추천 일정 & 팁")
-    
-    # 알람 날짜 계산
-    next_water = action_date + timedelta(days=5) # 보수적인 흙 마름 확인일
-    next_fert = action_date + timedelta(days=14)
-    
-    c1, c2, c3 = st.columns(3)
-    
-    # 관수 알람
-    c1.info(f"💧 **흙 마름 확인**\n\n{next_water.strftime('%Y-%m-%d')} 경\n\n(반양지 환경이므로 겉흙이 충분히 말랐는지 확인 후 관수하세요.)")
-    
-    # 영양제 알람 (알비료와 액비 구분)
-    if selected_fert != "주지 않음 (물만 줌)" and "코트" not in selected_fert and "마감프" not in selected_fert:
-        c2.warning(f"💊 **다음 액비 투여**\n\n{next_fert.strftime('%Y-%m-%d')} 경\n\n(식물 상태를 보고 농도를 조절하세요.)")
-    else:
-        c2.warning("💊 **알비료 효과 지속 중**\n\n(서서히 녹는 비료가 적용 중입니다. 과비료에 주의하세요.)")
-        
-    # 식물별 맞춤 팁 자동 생성
-    tip = ""
-    if category == "미니신닌기아" and action_type == "분갈이/가식":
-        tip = "새 촉이 올라올 때 액비(잭스 그로우)를 연하게 타서 주면 성장에 매우 좋습니다."
-    elif category == "사랑초 (동형/옵투사)":
-        tip = "가을 파종 후 싹이 틀 때 골드 아이언을 챙겨주시면 잎 색이 선명해지고 구근 성장에 큰 도움이 됩니다."
-    elif "파종" in category and action_type == "분갈이/가식":
-        tip = "새 흙에 뿌리가 자리 잡을 수 있도록 2~3일은 강광을 피해주세요. 안정이 되면 순지르기를 통해 곁가지를 풍성하게 유도하세요."
-    elif category == "애기부용":
-        tip = "목표하시는 20cm 토피어리 수형을 잡기 위해 아래쪽 곁가지는 수시로 다듬고, 꼭대기 생장점만 남겨 위로 키워주세요."
-    elif category == "스트렙토카르푸스" and action_type == "잎꽂이/삽목":
-        tip = "새순이 어느 정도 자라면 무름병 방지를 위해 흙 배수가 잘 되는 화분으로 정식해 주세요."
-    elif category == "가든멈국화":
-        tip = "가을에 풍성한 꽃을 보려면 늦여름(8월 말)부터 개화촉진제(잭스 블룸)를 투여하는 것이 좋습니다."
-    else:
-        tip = "소나무 그늘로 인해 일조량이 부족할 수 있으니, 각 식물 특성에 맞춰 가장 해가 잘 드는 명당 자리를 찾아주세요!"
-        
-    c3.error(f"✨ **스마트 케어 팁**\n\n{tip}")
+            if (stage === '정식') {
+                const pot = document.getElementById('potInfo').value;
+                extras = `<p><b>환경:</b> ${pot}</p><p><b>처방:</b> ${selectedFerts.length > 0 ? selectedFerts.join(', ') : '없음'}</p>`;
+                
+                // 스마트 꿀팁 및 경고 자동 생성
+                let tips = "<b>[정식 후 관리 꿀팁]</b><br>• 정식 직후 2~3일은 직사광선을 피해 밝은 그늘에서 적응시켜주세요.<br>";
+                if(selectedFerts.includes('벅스킹')) tips += "<span class='warning'>⚠️ [주의] 벅스킹 농약 성분이 있으니 강아지가 흙을 파지 못하게 베란다 접근을 주의하세요.</span><br>";
+                if(selectedFerts.includes('아그로믹파워')) tips += "• 아그로믹파워 알약은 연약한 뿌리에 닿지 않게 화분 가장자리에 잘 찔러 넣어주세요.<br>";
+                if(selectedFerts.includes('마감프K')) tips += "• 마감프K가 새 뿌리 활착을 도와줄 거에요. 첫 물은 흠뻑 주어 흙을 밀착시켜주세요.<br>";
+                
+                tipsHTML = `<div class="tips">${tips}</div>`;
 
-st.divider()
-st.caption("2026 베란다 정원 스마트 매니저 v2.0")
+                // 구글 캘린더 알람 링크 생성 (임의로 7일 뒤 물주기 알람)
+                let date = new Date();
+                date.setDate(date.getDate() + 7);
+                let dateString = date.toISOString().split('T')[0].replace(/-/g, '');
+                let calUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${name}+물주기/상태확인&dates=${dateString}T000000Z/${dateString}T100000Z&details=${name} 정식 후 1주일 경과! 상태를 확인해주세요.`;
+                calLink = `<a href="${calUrl}" target="_blank" style="text-decoration:none;"><button class="calendar-btn">📅 구글 캘린더에 물주기 알람 추가</button></a>`;
+            }
 
+            const plantDiv = document.createElement('div');
+            plantDiv.className = 'plant-item';
+            plantDiv.innerHTML = `
+                <div class="plant-name">${name} <span style="font-size:0.8em; color:gray;">(${stage})</span></div>
+                ${extras}
+                <p><b>📝 개체 메모:</b> ${note || "메모 없음"}</p>
+                ${tipsHTML}
+                ${calLink}
+            `;
+
+            document.getElementById('plantList').prepend(plantDiv);
+
+            // 입력 폼 초기화
+            document.getElementById('plantName').value = '';
+            document.getElementById('plantNote').value = '';
+            document.getElementById('potInfo').value = '';
+            checkboxes.forEach(cb => cb.checked = false);
+        }
+    </script>
+</body>
+</html>
