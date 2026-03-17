@@ -3,59 +3,51 @@ from datetime import datetime, timedelta
 import json
 
 st.set_page_config(
-    page_title="윤슬의 정원 매니저 v5",
-    layout="wide",
+page_title="윤슬의 정원 매니저 v6",
+layout="centered"
 )
 
-SAVE_FILE = "garden_log.json"
+SAVE_FILE="garden_log.json"
 
-# ------------------------
-# 데이터 저장 / 불러오기
-# ------------------------
+# -------------------------
+# 저장 / 불러오기
+# -------------------------
 
-def save_log():
+def save_data():
     with open(SAVE_FILE,"w",encoding="utf-8") as f:
-        json.dump(st.session_state.garden_log,f,ensure_ascii=False)
+        json.dump(st.session_state.data,f,ensure_ascii=False)
 
-def load_log():
+def load_data():
     try:
         with open(SAVE_FILE,"r",encoding="utf-8") as f:
-            st.session_state.garden_log=json.load(f)
+            st.session_state.data=json.load(f)
     except:
-        st.session_state.garden_log=[]
+        st.session_state.data={"plants":[],"logs":[]}
 
-if "garden_log" not in st.session_state:
-    load_log()
+if "data" not in st.session_state:
+    load_data()
 
-# ------------------------
+# -------------------------
 # 데이터
-# ------------------------
+# -------------------------
 
-MY_PLANTS=[
-"스카푸",
-"동형종 사랑초",
-"옵투사 사랑초",
-"미니신닌기아",
-"베고니아",
-"일본수국",
-"가든멈국화",
-"팬지/비올라",
-"네메시아",
-"금어초",
-"데모루",
-"기타"
+PLANT_TYPES=[
+"스카푸","동형종 사랑초","옵투사 사랑초",
+"미니신닌기아","베고니아","일본수국",
+"가든멈국화","팬지/비올라","네메시아",
+"금어초","데모루","기타"
 ]
 
-MY_FERTS=[
+FERTS=[
 "마감프K",
-"하이파 멀티코트 6개월",
+"멀티코트6개월",
 "아그로믹파워",
 "잭스 Grow",
 "잭스 Bloom",
-"하이파 멀티미크로 콤비",
+"멀티미크로",
 "골드아이언",
 "오스모코트",
-"벅스킹(살충제)"
+"벅스킹"
 ]
 
 WATER_RULE={
@@ -66,166 +58,172 @@ WATER_RULE={
 "베고니아":4
 }
 
-# ------------------------
+# -------------------------
 # 타이틀
-# ------------------------
+# -------------------------
 
 st.title("🌿 윤슬의 정원 매니저")
-st.caption("정남향 3층 베란다 · 소나무 필터광 환경")
+st.caption("정남향 3층 베란다 · 소나무 필터광")
 
-# ------------------------
-# 오늘 해야할 관리
-# ------------------------
+# -------------------------
+# 탭 UI
+# -------------------------
 
-st.subheader("📢 오늘 해야 할 관리")
+tab1,tab2,tab3,tab4,tab5=st.tabs([
+"📢 오늘관리",
+"🌱 식물목록",
+"➕ 기록",
+"📋 관리일지",
+"📊 통계"
+])
 
-today=datetime.now().strftime("%m월 %d일")
+# -------------------------
+# 오늘 관리
+# -------------------------
 
-today_tasks=0
+with tab1:
 
-for entry in st.session_state.garden_log:
-    if entry["water"]==today:
-        today_tasks+=1
-        st.warning(f"💧 {entry['name']} 물주기 추천")
+    st.subheader("오늘 해야 할 관리")
 
-if today_tasks==0:
-    st.success("오늘 예정된 물주기 없음 🌿")
+    today=datetime.now().strftime("%m월 %d일")
 
-# ------------------------
-# 입력 영역
-# ------------------------
+    count=0
 
-st.divider()
+    for log in st.session_state.data["logs"]:
 
-with st.form("plant_form",clear_on_submit=True):
+        if log["water"]==today:
 
-    st.subheader("🌱 식물 관리 기록")
+            count+=1
 
-    col1,col2=st.columns(2)
+            st.warning(f"💧 {log['plant']} 물주기")
 
-    with col1:
-        category=st.selectbox("식물 종류",MY_PLANTS)
-        name=st.text_input("개체 이름 (예: 스카푸1호)",max_chars=30)
+    if count==0:
+        st.success("오늘 예정된 관리 없음 🌿")
 
-    with col2:
-        stage=st.selectbox(
-        "상태",
-        ["파종","정식","성장기","꽃봉오리","개화","휴면"]
-        )
+# -------------------------
+# 식물 목록
+# -------------------------
 
-    st.write("💊 사용한 비료")
+with tab2:
 
-    ferts=[]
-    cols=st.columns(3)
+    st.subheader("우리집 식물")
 
-    for i,f in enumerate(MY_FERTS):
-        if cols[i%3].checkbox(f):
-            ferts.append(f)
+    for p in st.session_state.data["plants"]:
+        st.card(f"🌱 {p}")
 
-    notes=st.text_area("메모",max_chars=200)
+    newplant=st.text_input("식물 추가")
 
-    photo=st.file_uploader("식물 사진",type=["jpg","png"])
+    if st.button("추가"):
 
-    submitted=st.form_submit_button("🌿 기록 저장")
+        if newplant!="":
 
-    if submitted and name!="":
+            st.session_state.data["plants"].append(newplant)
 
-        now=datetime.now()
-
-        water_days=WATER_RULE.get(category,5)
-
-        water_day=(now+timedelta(days=water_days)).strftime("%m월 %d일")
-
-        entry={
-        "date":now.strftime("%Y-%m-%d %H:%M"),
-        "category":category,
-        "name":name,
-        "stage":stage,
-        "ferts":ferts,
-        "notes":notes,
-        "water":water_day
-        }
-
-        st.session_state.garden_log.insert(0,entry)
-
-        save_log()
-
-        st.success("기록 저장 완료 🌿")
-
-# ------------------------
-# 검색
-# ------------------------
-
-st.divider()
-
-st.subheader("🔍 식물 기록 검색")
-
-search=st.text_input("식물 이름 검색")
-
-if search:
-    logs=[e for e in st.session_state.garden_log if search.lower() in e["name"].lower()]
-else:
-    logs=st.session_state.garden_log
-
-# ------------------------
-# 기록 리스트
-# ------------------------
-
-st.subheader("📋 정원 관리 기록")
-
-for i,entry in enumerate(logs):
-
-    with st.expander(f"{entry['date']} | {entry['name']} ({entry['category']})"):
-
-        st.write("🌱 상태:",entry["stage"])
-
-        if entry["ferts"]:
-            st.write("💊 비료:",", ".join(entry["ferts"]))
-        else:
-            st.write("💊 비료: 없음")
-
-        st.write("📝 메모:",entry["notes"])
-
-        st.info(f"💧 다음 물주기 추천 : {entry['water']}")
-
-        if "벅스킹(살충제)" in entry["ferts"]:
-            st.warning("⚠ 반려견 접근 주의")
-
-        if st.button("🗑 기록 삭제",key=i):
-
-            st.session_state.garden_log.remove(entry)
-
-            save_log()
+            save_data()
 
             st.rerun()
 
-# ------------------------
-# 데이터 백업
-# ------------------------
+# -------------------------
+# 기록 입력
+# -------------------------
 
-st.divider()
+with tab3:
 
-st.subheader("💾 데이터 백업")
+    st.subheader("관리 기록")
 
-st.download_button(
-"📥 정원 기록 다운로드",
-json.dumps(st.session_state.garden_log,ensure_ascii=False),
-file_name="yoonseul_garden_backup.json"
-)
+    with st.form("logform"):
 
-# ------------------------
-# 레시피
-# ------------------------
+        plant=st.selectbox(
+        "식물 선택",
+        st.session_state.data["plants"]
+        )
 
-st.sidebar.header("📚 우리집 배합 레시피")
+        ptype=st.selectbox(
+        "식물 종류",
+        PLANT_TYPES
+        )
 
-with st.sidebar.expander("스카푸"):
-    st.write("반에그 5 : 야생화흙 4 : 훈탄 1")
+        stage=st.selectbox(
+        "상태",
+        ["파종","정식","성장","꽃봉오리","개화","휴면"]
+        )
 
-with st.sidebar.expander("수국 / 사랑초"):
-    st.write("반에그 7 : 야생화흙 2 : 훈탄 1")
+        fert=st.multiselect("비료",FERTS)
 
-with st.sidebar.expander("비료 기준 (9cm 화분)"):
-    st.write("마감프K 1.5g")
-    st.write("멀티코트 20알")
-    st.write("벅스킹 1g")
+        memo=st.text_area("메모")
+
+        submit=st.form_submit_button("저장")
+
+        if submit:
+
+            now=datetime.now()
+
+            water=WATER_RULE.get(ptype,5)
+
+            waterday=(now+timedelta(days=water)).strftime("%m월 %d일")
+
+            log={
+            "date":now.strftime("%Y-%m-%d"),
+            "plant":plant,
+            "type":ptype,
+            "stage":stage,
+            "fert":fert,
+            "memo":memo,
+            "water":waterday
+            }
+
+            st.session_state.data["logs"].insert(0,log)
+
+            save_data()
+
+            st.success("기록 저장 완료")
+
+# -------------------------
+# 기록 리스트
+# -------------------------
+
+with tab4:
+
+    st.subheader("관리 일지")
+
+    for i,log in enumerate(st.session_state.data["logs"]):
+
+        with st.expander(f"{log['date']} | {log['plant']}"):
+
+            st.write("상태:",log["stage"])
+
+            st.write("비료:",", ".join(log["fert"]))
+
+            st.write("메모:",log["memo"])
+
+            st.info(f"다음 물주기 {log['water']}")
+
+            if st.button("삭제",key=i):
+
+                st.session_state.data["logs"].remove(log)
+
+                save_data()
+
+                st.rerun()
+
+# -------------------------
+# 통계
+# -------------------------
+
+with tab5:
+
+    st.subheader("정원 통계")
+
+    st.metric("총 식물 수",len(st.session_state.data["plants"]))
+
+    st.metric("관리 기록",len(st.session_state.data["logs"]))
+
+    fert_count={}
+
+    for log in st.session_state.data["logs"]:
+        for f in log["fert"]:
+            fert_count[f]=fert_count.get(f,0)+1
+
+    st.write("비료 사용 통계")
+
+    st.json(fert_count)
