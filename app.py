@@ -2,23 +2,15 @@ import streamlit as st
 from datetime import datetime, timedelta
 import json
 
-st.set_page_config(
-page_title="윤슬의 정원 매니저 v6.1",
-layout="centered"
-)
+st.set_page_config(page_title="윤슬의 정원 매니저 v6.2",layout="centered")
 
 SAVE_FILE="garden_log.json"
-
-# -------------------------
-# 데이터 로드 (구버전 호환)
-# -------------------------
 
 def load_data():
     try:
         with open(SAVE_FILE,"r",encoding="utf-8") as f:
             data=json.load(f)
 
-        # v5 데이터 구조 대응
         if isinstance(data,list):
             st.session_state.data={
                 "plants":[],
@@ -40,16 +32,21 @@ def save_data():
 if "data" not in st.session_state:
     load_data()
 
-# -------------------------
-# 기본 데이터
-# -------------------------
-
 PLANT_TYPES=[
 "스카푸","동형종 사랑초","옵투사 사랑초",
 "미니신닌기아","베고니아","일본수국",
 "가든멈국화","팬지/비올라","네메시아",
 "금어초","데모루","기타"
 ]
+
+SOIL_RECIPES={
+"스카푸":"반에그5 : 산야초4 : 훈탄1",
+"동형종 사랑초":"반에그6 : 산야초3 : 훈탄1",
+"옵투사 사랑초":"반에그7 : 산야초2 : 훈탄1",
+"미니신닌기아":"반에그6 : 산야초3 : 훈탄1",
+"베고니아":"반에그6 : 산야초3 : 훈탄1",
+"일본수국":"반에그7 : 산야초2 : 훈탄1"
+}
 
 FERTS=[
 "마감프K","멀티코트6개월","아그로믹파워",
@@ -66,109 +63,84 @@ WATER_RULE={
 "베고니아":4
 }
 
-# -------------------------
-# 제목
-# -------------------------
-
 st.title("🌿 윤슬의 정원 매니저")
-st.caption("정남향 3층 베란다 · 소나무 필터광")
 
-# -------------------------
-# 탭 UI
-# -------------------------
-
-tab1,tab2,tab3,tab4,tab5=st.tabs([
+tab1,tab2,tab3,tab4,tab5,tab6=st.tabs([
 "📢 오늘관리",
 "🌱 식물목록",
 "➕ 기록",
 "📋 관리일지",
+"🪴 흙배합",
 "📊 통계"
 ])
 
-# -------------------------
 # 오늘관리
-# -------------------------
-
 with tab1:
 
-    st.subheader("오늘 해야 할 관리")
-
     today=datetime.now().strftime("%m월 %d일")
-
-    count=0
 
     for log in st.session_state.data["logs"]:
 
         if log.get("water")==today:
 
-            count+=1
+            st.warning(f"💧 {log.get('plant')} 물주기")
 
-            st.warning(f"💧 {log.get('plant','식물')} 물주기")
-
-    if count==0:
-        st.success("오늘 예정된 관리 없음 🌿")
-
-# -------------------------
-# 식물 목록
-# -------------------------
-
+# 식물목록
 with tab2:
 
-    st.subheader("우리집 식물")
+    for i,p in enumerate(st.session_state.data["plants"]):
 
-    if st.session_state.data["plants"]:
+        col1,col2=st.columns([4,1])
 
-        cols=st.columns(2)
+        with col1:
+            st.info(f"🌱 {p}")
 
-        for i,p in enumerate(st.session_state.data["plants"]):
+        with col2:
 
-            with cols[i%2]:
-                st.info(f"🌱 {p}")
+            if st.button("삭제",key=f"plant_del_{i}"):
 
-    newplant=st.text_input("새 식물 추가")
+                used=False
 
-    if st.button("식물 추가"):
+                for log in st.session_state.data["logs"]:
+                    if log["plant"]==p:
+                        used=True
+
+                if used:
+                    st.warning("기록이 있어 삭제할 수 없습니다")
+                else:
+                    st.session_state.data["plants"].remove(p)
+                    save_data()
+                    st.rerun()
+
+    newplant=st.text_input("식물 추가")
+
+    if st.button("추가"):
 
         if newplant!="":
-
             st.session_state.data["plants"].append(newplant)
-
             save_data()
-
             st.rerun()
 
-# -------------------------
-# 기록 입력
-# -------------------------
-
+# 기록
 with tab3:
-
-    st.subheader("관리 기록")
 
     plants=st.session_state.data["plants"]
 
-    if not plants:
-
-        st.warning("먼저 식물 목록에 식물을 추가하세요")
-
-    else:
+    if plants:
 
         with st.form("logform"):
 
-            plant=st.selectbox("식물 선택",plants)
+            plant=st.selectbox("식물",plants)
 
-            ptype=st.selectbox("식물 종류",PLANT_TYPES)
+            ptype=st.selectbox("종류",PLANT_TYPES)
 
-            stage=st.selectbox(
-            "상태",
-            ["파종","정식","성장","꽃봉오리","개화","휴면"]
-            )
+            stage=st.selectbox("상태",["파종","성장","개화","휴면"])
 
             fert=st.multiselect("비료",FERTS)
 
             memo=st.text_area("메모")
 
-            submit=st.form_submit_button("기록 저장")
+            submit=st.form_submit_button("저장")
 
             if submit:
 
@@ -192,39 +164,24 @@ with tab3:
 
                 save_data()
 
-                st.success("기록 저장 완료 🌿")
+                st.success("기록 저장")
 
-# -------------------------
 # 관리일지
-# -------------------------
-
 with tab4:
 
-    st.subheader("관리 기록")
+    for i,log in enumerate(st.session_state.data["logs"]):
 
-    logs=st.session_state.data["logs"]
+        with st.expander(f"{log['date']} | {log['plant']}"):
 
-    if not logs:
-        st.info("기록이 없습니다")
+            st.write("상태:",log["stage"])
 
-    for i,log in enumerate(logs):
+            st.write("비료:",", ".join(log["fert"]))
 
-        with st.expander(f"{log.get('date')} | {log.get('plant')}"):
+            st.write("메모:",log["memo"])
 
-            st.write("🌱 상태:",log.get("stage"))
+            st.info(f"다음 물주기 {log['water']}")
 
-            ferts=log.get("fert",[])
-
-            if ferts:
-                st.write("💊 비료:",", ".join(ferts))
-            else:
-                st.write("💊 비료 없음")
-
-            st.write("📝 메모:",log.get("memo",""))
-
-            st.info(f"💧 다음 물주기 {log.get('water')}")
-
-            if st.button("삭제",key=i):
+            if st.button("삭제",key=f"log{i}"):
 
                 st.session_state.data["logs"].remove(log)
 
@@ -232,30 +189,20 @@ with tab4:
 
                 st.rerun()
 
-# -------------------------
-# 통계
-# -------------------------
-
+# 흙배합
 with tab5:
 
-    st.subheader("정원 통계")
+    st.subheader("우리집 흙 배합")
 
-    plants=len(st.session_state.data["plants"])
+    for plant,recipe in SOIL_RECIPES.items():
 
-    logs=len(st.session_state.data["logs"])
+        st.success(f"{plant}")
 
-    st.metric("총 식물 수",plants)
+        st.write(recipe)
 
-    st.metric("관리 기록 수",logs)
+# 통계
+with tab6:
 
-    fert_count={}
+    st.metric("식물 수",len(st.session_state.data["plants"]))
 
-    for log in st.session_state.data["logs"]:
-
-        for f in log.get("fert",[]):
-
-            fert_count[f]=fert_count.get(f,0)+1
-
-    st.write("비료 사용 통계")
-
-    st.json(fert_count)
+    st.metric("관리 기록",len(st.session_state.data["logs"]))
