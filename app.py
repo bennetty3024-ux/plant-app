@@ -1,134 +1,109 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>나만의 정원 매니저 v3.0</title>
+import streamlit as st
+from datetime import datetime, timedelta
+
+# 1. 페이지 설정 및 디자인
+st.set_page_config(page_title="나만의 정원 매니저 v3.0", layout="centered")
+
+st.markdown("""
     <style>
-        body { font-family: 'Malgun Gothic', sans-serif; background-color: #f4f9f4; margin: 0; padding: 20px; color: #333; }
-        h1 { color: #2e7d32; text-align: center; }
-        .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        label { font-weight: bold; display: block; margin-top: 10px; color: #555; }
-        input[type="text"], select, textarea { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-        .checkbox-group { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 5px; }
-        .checkbox-group label { font-weight: normal; display: flex; align-items: center; margin-top: 0; }
-        .checkbox-group input { margin-right: 5px; }
-        button { background-color: #4caf50; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-size: 16px; width: 100%; margin-top: 15px; }
-        button:hover { background-color: #45a049; }
-        .plant-item { border-left: 5px solid #4caf50; padding-left: 15px; margin-bottom: 20px; background: #fafafa; padding: 15px; border-radius: 8px; }
-        .plant-name { font-size: 1.2em; font-weight: bold; color: #2e7d32; }
-        .tips { background: #e8f5e9; padding: 10px; border-radius: 6px; margin-top: 10px; font-size: 0.9em; }
-        .warning { color: #d32f2f; font-weight: bold; }
-        .calendar-btn { background-color: #4285F4; margin-top: 10px; }
-        .hidden { display: none; }
+    .main { background-color: #f4f9f4; }
+    .stButton>button { background-color: #4caf50; color: white; width: 100%; border-radius: 8px; }
+    .stExpander { background-color: white; border-radius: 10px; border: 1px solid #e0e0e0; }
     </style>
-</head>
-<body>
+    """, unsafe_allow_html=True)
 
-    <h1>🌿 나만의 정원 매니저 v3.0</h1>
+st.title("🌿 나만의 정원 매니저 v3.0")
+st.caption("윤슬님의 소중한 정원을 위한 통합 관리 시스템")
 
-    <div class="card">
-        <h3>새 식물/작업 등록</h3>
-        <label>식물 이름 (개체별)</label>
-        <input type="text" id="plantName" placeholder="예: 스카푸 1호, 금어초 파종이">
+# 세션 상태 초기화
+if 'plants' not in st.session_state:
+    st.session_state.plants = []
 
-        <label>현재 단계</label>
-        <select id="plantStage" onchange="toggleRepottingFields()">
-            <option value="파종">파종</option>
-            <option value="정식" selected>정식 (분갈이)</option>
-            <option value="성장">성장</option>
-            <option value="개화">개화</option>
-        </select>
+# 2. 고정 데이터 (2.0 버전 카테고리 복구)
+PLANT_TYPES = ["사랑초(Oxalis)", "미니신닌기아", "베고니아", "금어초", "네메시아", "데모루", "수국", "기타"]
+FERTILIZERS = ["마감프K", "하이파 멀티코트", "아그로믹파워", "잭스 프로페셔널(Bloom)", "잭스 프로페셔널(Grow)", "벅스킹", "골드아이언", "오스모코트"]
 
-        <div id="repottingFields">
-            <label>화분/흙 정보</label>
-            <input type="text" id="potInfo" placeholder="예: 9cm 화분 / 반에그먼트+야생화흙">
-
-            <label>투입 비료 및 방제 (다중 선택)</label>
-            <div class="checkbox-group">
-                <label><input type="checkbox" value="마감프K"> 마감프K</label>
-                <label><input type="checkbox" value="하이파 멀티코트"> 하이파 멀티코트</label>
-                <label><input type="checkbox" value="아그로믹파워"> 아그로믹파워</label>
-                <label><input type="checkbox" value="잭스 프로페셔널"> 잭스 프로페셔널</label>
-                <label><input type="checkbox" value="벅스킹"> 벅스킹(살충제)</label>
-            </div>
-        </div>
-
-        <label>개체별 특이사항 (메모)</label>
-        <textarea id="plantNote" rows="3" placeholder="이 개체만의 상태나 특징을 적어주세요."></textarea>
-
-        <button onclick="addPlant()">기록 저장하기</button>
-    </div>
-
-    <div class="card">
-        <h3>🌱 내 식물 관리 일지</h3>
-        <div id="plantList"></div>
-    </div>
-
-    <script>
-        function toggleRepottingFields() {
-            const stage = document.getElementById('plantStage').value;
-            const repotFields = document.getElementById('repottingFields');
-            if(stage === '정식') {
-                repotFields.classList.remove('hidden');
-            } else {
-                repotFields.classList.add('hidden');
-            }
-        }
-
-        function addPlant() {
-            const name = document.getElementById('plantName').value;
-            const stage = document.getElementById('plantStage').value;
-            const note = document.getElementById('plantNote').value;
-            let extras = "";
-            let tipsHTML = "";
-            let calLink = "";
-
-            if (!name) { alert("식물 이름을 입력해주세요!"); return; }
-
-            // 다중 선택 비료 수집
-            let selectedFerts = [];
-            const checkboxes = document.querySelectorAll('#repottingFields input[type="checkbox"]:checked');
-            checkboxes.forEach((cb) => { selectedFerts.push(cb.value); });
-
-            if (stage === '정식') {
-                const pot = document.getElementById('potInfo').value;
-                extras = `<p><b>환경:</b> ${pot}</p><p><b>처방:</b> ${selectedFerts.length > 0 ? selectedFerts.join(', ') : '없음'}</p>`;
+# 3. 입력 섹션
+with st.form("plant_form", clear_on_submit=True):
+    st.subheader("📝 새 기록 등록")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        plant_type = st.selectbox("식물 종류", PLANT_TYPES)
+        name = st.text_input("상세 이름/번호", placeholder="예: 스카푸 1호")
+    with col2:
+        stage = st.selectbox("현재 단계", ["파종/잎꽂이", "정식(분갈이)", "성장기", "개화기", "휴면기"])
+    
+    # 3.0 핵심: 정식(분갈이) 다중 선택 기능
+    pot_info = ""
+    selected_ferts = []
+    if stage == "정식(분갈이)":
+        st.info("💡 스카푸/사랑초 전용 흙 레시피를 참고하여 정식을 기록하세요.")
+        pot_info = st.text_input("사용 흙 배합", placeholder="예: 반에그먼트 7 : 야생화흙 2 : 훈탄 1")
+        
+        st.write("💊 투입 영양제 및 방제 (다중 선택)")
+        cols = st.columns(3)
+        for i, f in enumerate(FERTILIZERS):
+            if cols[i % 3].checkbox(f):
+                selected_ferts.append(f)
                 
-                // 스마트 꿀팁 및 경고 자동 생성
-                let tips = "<b>[정식 후 관리 꿀팁]</b><br>• 정식 직후 2~3일은 직사광선을 피해 밝은 그늘에서 적응시켜주세요.<br>";
-                if(selectedFerts.includes('벅스킹')) tips += "<span class='warning'>⚠️ [주의] 벅스킹 농약 성분이 있으니 강아지가 흙을 파지 못하게 베란다 접근을 주의하세요.</span><br>";
-                if(selectedFerts.includes('아그로믹파워')) tips += "• 아그로믹파워 알약은 연약한 뿌리에 닿지 않게 화분 가장자리에 잘 찔러 넣어주세요.<br>";
-                if(selectedFerts.includes('마감프K')) tips += "• 마감프K가 새 뿌리 활착을 도와줄 거에요. 첫 물은 흠뻑 주어 흙을 밀착시켜주세요.<br>";
-                
-                tipsHTML = `<div class="tips">${tips}</div>`;
-
-                // 구글 캘린더 알람 링크 생성 (임의로 7일 뒤 물주기 알람)
-                let date = new Date();
-                date.setDate(date.getDate() + 7);
-                let dateString = date.toISOString().split('T')[0].replace(/-/g, '');
-                let calUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${name}+물주기/상태확인&dates=${dateString}T000000Z/${dateString}T100000Z&details=${name} 정식 후 1주일 경과! 상태를 확인해주세요.`;
-                calLink = `<a href="${calUrl}" target="_blank" style="text-decoration:none;"><button class="calendar-btn">📅 구글 캘린더에 물주기 알람 추가</button></a>`;
+    note = st.text_area("개체별 특이사항 (메모)", placeholder="이 아이만의 특별한 상태를 적어주세요. (개별 저장됩니다)")
+    
+    submitted = st.form_submit_button("정원 일지에 저장하기")
+    
+    if submitted:
+        if name:
+            new_entry = {
+                "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                "type": plant_type,
+                "name": name,
+                "stage": stage,
+                "pot": pot_info,
+                "ferts": selected_ferts,
+                "note": note
             }
+            st.session_state.plants.insert(0, new_entry)
+            st.success(f"'{name}' 기록이 안전하게 저장되었습니다!")
+        else:
+            st.error("상세 이름을 입력해주세요!")
 
-            const plantDiv = document.createElement('div');
-            plantDiv.className = 'plant-item';
-            plantDiv.innerHTML = `
-                <div class="plant-name">${name} <span style="font-size:0.8em; color:gray;">(${stage})</span></div>
-                ${extras}
-                <p><b>📝 개체 메모:</b> ${note || "메모 없음"}</p>
-                ${tipsHTML}
-                ${calLink}
-            `;
+# 4. 관리 일지 및 지능형 가이드
+st.divider()
+st.subheader("📋 나의 가드닝 히스토리")
 
-            document.getElementById('plantList').prepend(plantDiv);
+if not st.session_state.plants:
+    st.write("아직 기록이 없습니다. 오늘 분갈이한 아이부터 등록해보세요!")
+else:
+    for p in st.session_state.plants:
+        with st.expander(f"{p['date']} | [{p['type']}] {p['name']} - {p['stage']}"):
+            if p['pot']: st.write(f"**🪴 흙 배합:** {p['pot']}")
+            if p['ferts']: st.write(f"**💊 사용 비료:** {', '.join(p['ferts'])}")
+            st.write(f"**📝 개별 메모:** {p['note']}")
+            
+            # 맞춤형 꿀팁 (3.0 버전 로직)
+            if "벅스킹" in p['ferts']:
+                st.warning("⚠️ [주의] 벅스킹 농약 성분이 포함됨. 강아지가 화분 근처에 가지 않도록 주의!")
+            if "아그로믹파워" in p['ferts']:
+                st.info("💡 아그로믹파워 알약은 뿌리에 직접 닿지 않게 가장자리에 잘 넣어주셨죠?")
+            if "정식" in p['stage']:
+                st.success("✨ 분갈이 후 2-3일은 밝은 그늘에서 적응시켜주는 것, 잊지 마세요!")
+            
+            # 구글 캘린더 연동
+            next_date = (datetime.now() + timedelta(days=7)).strftime("%Y%m%dT090000Z")
+            cal_url = f"https://calendar.google.com/calendar/render?action=TEMPLATE&text={p['name']}+상태확인&dates={next_date}/{next_date}&details={p['name']} 정식 후 일주일 경과!"
+            st.link_button("📅 7일 뒤 물주기 알림 추가", cal_url)
 
-            // 입력 폼 초기화
-            document.getElementById('plantName').value = '';
-            document.getElementById('plantNote').value = '';
-            document.getElementById('potInfo').value = '';
-            checkboxes.forEach(cb => cb.checked = false);
-        }
-    </script>
-</body>
-</html>
+# 5. 레시피 참고 (2.0 버전 가이드 복구)
+with st.sidebar:
+    st.header("📚 가드닝 레시피")
+    st.markdown("""
+    **[스카푸 전용 레시피]**
+    - 반에그먼트 500ml
+    - 야생화흙 400ml
+    - 훈탄 100ml
+    
+    **[9cm 화분 정식 표준]**
+    - 마감프K 1.5g
+    - 멀티코트 20알
+    - 벅스킹 1g
+    """)
