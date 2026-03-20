@@ -1,8 +1,8 @@
 import streamlit as st
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
-st.set_page_config(page_title="윤슬의 정원 v7.5", layout="wide")
+st.set_page_config(page_title="윤슬의 정원 v7.6", layout="wide")
 
 DATA_FILE="garden_data.json"
 
@@ -34,11 +34,26 @@ CATEGORIES=[
 "미니신닌기아","팬지/비올라"
 ]
 
+# '벅스킬' 추가됨
 FERTS=[
 "마감프K","멀티코트","아그로믹파워",
 "잭스 Grow","잭스 Bloom","멀티미크로",
-"골드아이언","토탈싹"
+"골드아이언","토탈싹", "벅스킬"
 ]
+
+# [신규 기능] 영양제/약제별 재투입 주기 (일 단위)
+# 사용 주기에 맞춰 정확한 일수를 자유롭게 수정할 수 있어.
+REAPPLY_DAYS = {
+    "마감프K": 180,       # 약 6개월 유지
+    "멀티코트": 180,       # 약 6개월 유지
+    "아그로믹파워": 90,     # 약 3개월
+    "잭스 Grow": 14,      # 2주 간격 액비
+    "잭스 Bloom": 14,     # 2주 간격 액비
+    "멀티미크로": 30,      # 한 달 간격
+    "골드아이언": 30,      # 한 달 간격
+    "토탈싹": 30,         # 한 달 예방
+    "벅스킬": 14          # 2주 간격 방제
+}
 
 POTS={
 "5호":0.3,
@@ -85,10 +100,11 @@ RECIPES={
 # 타이틀
 # ---------------------
 
-st.title("🌿 윤슬의 정원 매니저 v7.5")
+st.title("🌿 윤슬의 정원 매니저 v7.6")
 
+# '할일목록' 탭 추가
 tabs=st.tabs([
-"홈","식물관리","영양제기록",
+"홈","할일목록","식물관리","영양제기록",
 "분갈이계산기","흙배합","식물등"
 ])
 
@@ -111,10 +127,48 @@ with tabs[0]:
         st.write(f"{k} : {v}")
 
 # ---------------------
-# 식물관리
+# 할일목록 (오늘 해야 할 약제/영양제 관리)
 # ---------------------
 
 with tabs[1]:
+    st.subheader("📋 오늘의 정원 할 일")
+    st.caption("과거 기록을 바탕으로 영양제와 병충해 약 투입 시기를 알려줍니다.")
+    
+    today = datetime.now()
+    todo_list = []
+    
+    # 기록 데이터를 불러와 주기 계산
+    for log in st.session_state.data.get("logs", []):
+        log_date = datetime.strptime(log["date"], "%Y-%m-%d")
+        plant_name = log["plant"]
+        
+        for fert in log.get("fert", []):
+            if fert in REAPPLY_DAYS:
+                # 마지막 투입일 + 권장 주기
+                next_date = log_date + timedelta(days=REAPPLY_DAYS[fert])
+                
+                # 오늘 날짜 기준으로 투입 시기가 지났거나 오늘이면 목록에 추가
+                if next_date <= today:
+                    days_passed = (today - log_date).days
+                    todo_list.append({
+                        "plant": plant_name,
+                        "fert": fert,
+                        "last_date": log["date"],
+                        "days_passed": days_passed
+                    })
+    
+    # 알림 표시
+    if todo_list:
+        for item in todo_list:
+            st.warning(f"💧 **{item['plant']}** : **{item['fert']}** 재투입이 필요해! (마지막 투입일: {item['last_date']} / {item['days_passed']}일 경과)")
+    else:
+        st.success("🎉 오늘은 투입할 약제나 영양제가 없어. 식물들과 평화로운 하루를 보내!")
+
+# ---------------------
+# 식물관리
+# ---------------------
+
+with tabs[2]:
 
     st.subheader("식물 추가")
 
@@ -163,7 +217,7 @@ with tabs[1]:
 # 영양제 기록
 # ---------------------
 
-with tabs[2]:
+with tabs[3]:
 
     if st.session_state.data["plants"]:
 
@@ -171,7 +225,7 @@ with tabs[2]:
 
         plant=st.selectbox("식물 선택",plant_names)
 
-        fert=st.multiselect("영양제",FERTS)
+        fert=st.multiselect("영양제 및 약제",FERTS)
 
         note=st.text_input("메모")
 
@@ -202,7 +256,7 @@ with tabs[2]:
 # 분갈이 계산기
 # ---------------------
 
-with tabs[3]:
+with tabs[4]:
 
     plant=st.selectbox("식물 종류",list(RECIPES.keys()))
 
@@ -230,7 +284,7 @@ with tabs[3]:
 # 흙배합
 # ---------------------
 
-with tabs[4]:
+with tabs[5]:
 
     plant=st.selectbox("식물",list(RECIPES.keys()))
 
@@ -250,7 +304,7 @@ with tabs[4]:
 # 식물등
 # ---------------------
 
-with tabs[5]:
+with tabs[6]:
 
     month=datetime.now().month
 
