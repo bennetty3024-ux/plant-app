@@ -34,25 +34,23 @@ CATEGORIES=[
 "미니신닌기아","팬지/비올라"
 ]
 
-# '벅스킬' 추가됨
 FERTS=[
 "마감프K","멀티코트","아그로믹파워",
 "잭스 Grow","잭스 Bloom","멀티미크로",
 "골드아이언","토탈싹", "벅스킬"
 ]
 
-# [신규 기능] 영양제/약제별 재투입 주기 (일 단위)
-# 사용 주기에 맞춰 정확한 일수를 자유롭게 수정할 수 있어.
+# 영양제/약제별 재투입 주기 (일 단위)
 REAPPLY_DAYS = {
-    "마감프K": 180,       # 약 6개월 유지
-    "멀티코트": 180,       # 약 6개월 유지
-    "아그로믹파워": 90,     # 약 3개월
-    "잭스 Grow": 14,      # 2주 간격 액비
-    "잭스 Bloom": 14,     # 2주 간격 액비
-    "멀티미크로": 30,      # 한 달 간격
-    "골드아이언": 30,      # 한 달 간격
-    "토탈싹": 30,         # 한 달 예방
-    "벅스킬": 14          # 2주 간격 방제
+    "마감프K": 180,       
+    "멀티코트": 180,       
+    "아그로믹파워": 90,     
+    "잭스 Grow": 14,      
+    "잭스 Bloom": 14,     
+    "멀티미크로": 30,      
+    "골드아이언": 30,      
+    "토탈싹": 30,         
+    "벅스킬": 14          
 }
 
 POTS={
@@ -68,31 +66,31 @@ POTS={
 
 RECIPES={
 
-"사랑초":{"VanEgmond":650,"산야초":250,"질석":0,"훈탄":100,
+"사랑초":{"바로커":650,"산야초":250,"질석":0,"훈탄":100,
 "마감프K":1.5,"멀티코트":3,"아그로믹파워":1,"토탈싹":0.8},
 
-"스카푸":{"VanEgmond":450,"산야초":350,"질석":100,"훈탄":100,
+"스카푸":{"바로커":450,"산야초":350,"질석":100,"훈탄":100,
 "멀티코트":2,"마감프K":1,"아그로믹파워":1,"토탈싹":0.8},
 
-"베고니아":{"VanEgmond":500,"산야초":300,"질석":100,"훈탄":100,
+"베고니아":{"바로커":500,"산야초":300,"질석":100,"훈탄":100,
 "멀티코트":2,"아그로믹파워":1,"토탈싹":0.8},
 
-"미니신닌기아":{"VanEgmond":400,"산야초":350,"질석":150,"훈탄":100,
+"미니신닌기아":{"바로커":400,"산야초":350,"질석":150,"훈탄":100,
 "멀티코트":3,"아그로믹파워":1,"토탈싹":0.8},
 
-"구근류":{"VanEgmond":550,"산야초":300,"질석":50,"훈탄":100,
+"구근류":{"바로커":550,"산야초":300,"질석":50,"훈탄":100,
 "멀티코트":2,"토탈싹":0.8},
 
-"수국":{"VanEgmond":600,"산야초":300,"질석":0,"훈탄":100,
+"수국":{"바로커":600,"산야초":300,"질석":0,"훈탄":100,
 "멀티코트":3,"아그로믹파워":1,"토탈싹":0.8},
 
-"팬지/비올라":{"VanEgmond":600,"산야초":300,"질석":0,"훈탄":100,
+"팬지/비올라":{"바로커":600,"산야초":300,"질석":0,"훈탄":100,
 "멀티코트":2,"토탈싹":0.8},
 
-"가든멈국화":{"VanEgmond":600,"산야초":300,"질석":0,"훈탄":100,
+"가든멈국화":{"바로커":600,"산야초":300,"질석":0,"훈탄":100,
 "멀티코트":3,"토탈싹":0.8},
 
-"파종 식물":{"VanEgmond":500,"산야초":300,"질석":200,"훈탄":0,
+"파종 식물":{"바로커":500,"산야초":300,"질석":200,"훈탄":0,
 "멀티코트":1,"토탈싹":0.5}
 }
 
@@ -102,7 +100,6 @@ RECIPES={
 
 st.title("🌿 윤슬의 정원 매니저 v7.6")
 
-# '할일목록' 탭 추가
 tabs=st.tabs([
 "홈","할일목록","식물관리","영양제기록",
 "분갈이계산기","흙배합","식물등"
@@ -127,7 +124,7 @@ with tabs[0]:
         st.write(f"{k} : {v}")
 
 # ---------------------
-# 할일목록 (오늘 해야 할 약제/영양제 관리)
+# 할일목록
 # ---------------------
 
 with tabs[1]:
@@ -137,17 +134,14 @@ with tabs[1]:
     today = datetime.now()
     todo_list = []
     
-    # 기록 데이터를 불러와 주기 계산
     for log in st.session_state.data.get("logs", []):
         log_date = datetime.strptime(log["date"], "%Y-%m-%d")
         plant_name = log["plant"]
         
         for fert in log.get("fert", []):
             if fert in REAPPLY_DAYS:
-                # 마지막 투입일 + 권장 주기
                 next_date = log_date + timedelta(days=REAPPLY_DAYS[fert])
                 
-                # 오늘 날짜 기준으로 투입 시기가 지났거나 오늘이면 목록에 추가
                 if next_date <= today:
                     days_passed = (today - log_date).days
                     todo_list.append({
@@ -157,7 +151,6 @@ with tabs[1]:
                         "days_passed": days_passed
                     })
     
-    # 알림 표시
     if todo_list:
         for item in todo_list:
             st.warning(f"💧 **{item['plant']}** : **{item['fert']}** 재투입이 필요해! (마지막 투입일: {item['last_date']} / {item['days_passed']}일 경과)")
@@ -165,7 +158,7 @@ with tabs[1]:
         st.success("🎉 오늘은 투입할 약제나 영양제가 없어. 식물들과 평화로운 하루를 보내!")
 
 # ---------------------
-# 식물관리
+# 식물관리 (수정 기능 추가됨)
 # ---------------------
 
 with tabs[2]:
@@ -201,17 +194,40 @@ with tabs[2]:
 
     for i,p in enumerate(plants):
 
-        col1,col2=st.columns([6,1])
+        # 레이아웃을 3칸으로 나누어 수정/삭제 버튼 배치
+        col1, col2, col3 = st.columns([6, 1, 1])
 
         with col1:
             st.write(f"🌱 {p['category']} - {p['name']}")
 
         with col2:
-            if st.button("삭제",key=f"del{i}"):
+            # 상태 관리를 통해 수정 창을 열고 닫음
+            if st.button("수정", key=f"edit_btn_{i}"):
+                st.session_state[f"edit_mode_{i}"] = not st.session_state.get(f"edit_mode_{i}", False)
 
+        with col3:
+            if st.button("삭제", key=f"del_{i}"):
                 st.session_state.data["plants"].remove(p)
                 save_data()
                 st.rerun()
+
+        # 수정 버튼을 눌렀을 때 나타나는 입력창
+        if st.session_state.get(f"edit_mode_{i}", False):
+            with st.expander("📝 식물 정보 수정", expanded=True):
+                new_category = st.selectbox(
+                    "새 카테고리", 
+                    CATEGORIES, 
+                    index=CATEGORIES.index(p['category']) if p['category'] in CATEGORIES else 0,
+                    key=f"new_cat_{i}"
+                )
+                new_name = st.text_input("새 식물 이름", value=p['name'], key=f"new_name_{i}")
+                
+                if st.button("저장", key=f"save_btn_{i}"):
+                    p['category'] = new_category
+                    p['name'] = new_name
+                    st.session_state[f"edit_mode_{i}"] = False
+                    save_data()
+                    st.rerun()
 
 # ---------------------
 # 영양제 기록
@@ -274,7 +290,7 @@ with tabs[4]:
 
         for k,v in recipe.items():
 
-            if k in ["VanEgmond","산야초","질석","훈탄"]:
+            if k in ["바로커","산야초","질석","훈탄"]:
                 st.write(f"{k} : {v*volume/1000:.2f} L")
 
             else:
@@ -294,7 +310,7 @@ with tabs[5]:
 
     for k,v in recipe.items():
 
-        if k in ["VanEgmond","산야초","질석","훈탄"]:
+        if k in ["바로커","산야초","질석","훈탄"]:
             st.write(f"{k} : {v} ml")
 
         else:
