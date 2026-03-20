@@ -2,7 +2,7 @@ import streamlit as st
 import json
 from datetime import datetime, timedelta
 
-st.set_page_config(page_title="윤슬의 정원 v7.6", layout="wide")
+st.set_page_config(page_title="윤슬의 정원 v7.7", layout="wide")
 
 DATA_FILE="garden_data.json"
 
@@ -28,10 +28,11 @@ if "data" not in st.session_state:
 # 기본 설정
 # ---------------------
 
+# '옵투사사랑초'와 '아키메네스' 추가됨
 CATEGORIES=[
-"사랑초","스카푸","베고니아","구근류",
-"수국","파종 식물","가든멈국화",
-"미니신닌기아","팬지/비올라"
+"옵투사사랑초", "사랑초", "스카푸", "베고니아", "아키메네스",
+"구근류", "수국", "파종 식물", "가든멈국화",
+"미니신닌기아", "팬지/비올라"
 ]
 
 FERTS=[
@@ -54,43 +55,47 @@ REAPPLY_DAYS = {
 }
 
 POTS={
-"5호":0.3,
-"9호":0.8,
-"10호":1.0,
-"15호":2.5
+"5호":0.3, "9호":0.8, "10호":1.0, "15호":2.5
 }
 
 # ---------------------
-# 흙배합 레시피
+# 흙배합 레시피 (질석 포함 및 상토 이원화)
 # ---------------------
+# 옵투사사랑초만 '바로커', 나머지는 '반에그먼트' 사용
+# 스카푸, 미니신닌기아, 아키메네스 질석 비율 상향 조정
 
 RECIPES={
-
-"사랑초":{"바로커":650,"산야초":250,"질석":0,"훈탄":100,
+"옵투사사랑초":{"바로커":650,"산야초":250,"질석":0,"훈탄":100,
 "마감프K":1.5,"멀티코트":3,"아그로믹파워":1,"토탈싹":0.8},
 
-"스카푸":{"바로커":450,"산야초":350,"질석":100,"훈탄":100,
+"사랑초":{"반에그먼트":650,"산야초":250,"질석":0,"훈탄":100,
+"마감프K":1.5,"멀티코트":3,"아그로믹파워":1,"토탈싹":0.8},
+
+"스카푸":{"반에그먼트":400,"산야초":300,"질석":200,"훈탄":100,
 "멀티코트":2,"마감프K":1,"아그로믹파워":1,"토탈싹":0.8},
 
-"베고니아":{"바로커":500,"산야초":300,"질석":100,"훈탄":100,
+"베고니아":{"반에그먼트":500,"산야초":300,"질석":100,"훈탄":100,
 "멀티코트":2,"아그로믹파워":1,"토탈싹":0.8},
 
-"미니신닌기아":{"바로커":400,"산야초":350,"질석":150,"훈탄":100,
+"아키메네스":{"반에그먼트":450,"산야초":250,"질석":200,"훈탄":100,
 "멀티코트":3,"아그로믹파워":1,"토탈싹":0.8},
 
-"구근류":{"바로커":550,"산야초":300,"질석":50,"훈탄":100,
-"멀티코트":2,"토탈싹":0.8},
-
-"수국":{"바로커":600,"산야초":300,"질석":0,"훈탄":100,
+"미니신닌기아":{"반에그먼트":400,"산야초":250,"질석":250,"훈탄":100,
 "멀티코트":3,"아그로믹파워":1,"토탈싹":0.8},
 
-"팬지/비올라":{"바로커":600,"산야초":300,"질석":0,"훈탄":100,
+"구근류":{"반에그먼트":550,"산야초":300,"질석":50,"훈탄":100,
 "멀티코트":2,"토탈싹":0.8},
 
-"가든멈국화":{"바로커":600,"산야초":300,"질석":0,"훈탄":100,
-"멀티코트":3,"토탈싹":0.8},
+"수국":{"반에그먼트":600,"산야초":300,"질석":0,"훈탄":100,
+"멀티코트":3,"아그로믹파워":1,"토탈싹":0.8},
 
-"파종 식물":{"바로커":500,"산야초":300,"질석":200,"훈탄":0,
+"팬지/비올라":{"반에그먼트":600,"산야초":300,"질석":0,"훈탄":100,
+"멀티코트":2,"토탈싹":0.8},
+
+"가든멈국화":{"반에그먼트":600,"산야초":300,"질석":0,"훈탄":100,
+"멀티코트":3,"아그로믹파워":1,"토탈싹":0.8},
+
+"파종 식물":{"반에그먼트":500,"산야초":250,"질석":250,"훈탄":0,
 "멀티코트":1,"토탈싹":0.5}
 }
 
@@ -98,7 +103,7 @@ RECIPES={
 # 타이틀
 # ---------------------
 
-st.title("🌿 윤슬의 정원 매니저 v7.6")
+st.title("🌿 윤슬의 정원 매니저 v7.7")
 
 tabs=st.tabs([
 "홈","할일목록","식물관리","영양제기록",
@@ -110,189 +115,133 @@ tabs=st.tabs([
 # ---------------------
 
 with tabs[0]:
-
     total=len(st.session_state.data["plants"])
-
     st.metric("총 식물 수",total)
-
     category_count={}
-
     for p in st.session_state.data["plants"]:
         category_count[p["category"]]=category_count.get(p["category"],0)+1
-
     for k,v in category_count.items():
         st.write(f"{k} : {v}")
 
 # ---------------------
-# 할일목록
+# 할일목록 (영양제 + 전정/순따기 알림 통합)
 # ---------------------
 
 with tabs[1]:
     st.subheader("📋 오늘의 정원 할 일")
-    st.caption("과거 기록을 바탕으로 영양제와 병충해 약 투입 시기를 알려줍니다.")
     
+    # 1. 영양제 및 약제 알림
+    st.markdown("#### 💧 관리 알림")
     today = datetime.now()
     todo_list = []
-    
     for log in st.session_state.data.get("logs", []):
         log_date = datetime.strptime(log["date"], "%Y-%m-%d")
-        plant_name = log["plant"]
-        
         for fert in log.get("fert", []):
             if fert in REAPPLY_DAYS:
                 next_date = log_date + timedelta(days=REAPPLY_DAYS[fert])
-                
                 if next_date <= today:
-                    days_passed = (today - log_date).days
-                    todo_list.append({
-                        "plant": plant_name,
-                        "fert": fert,
-                        "last_date": log["date"],
-                        "days_passed": days_passed
-                    })
+                    todo_list.append(f"**{log['plant']}** : **{fert}** 재투입 필요 (마지막: {log['date']})")
     
     if todo_list:
-        for item in todo_list:
-            st.warning(f"💧 **{item['plant']}** : **{item['fert']}** 재투입이 필요해! (마지막 투입일: {item['last_date']} / {item['days_passed']}일 경과)")
+        for item in set(todo_list): # 중복 제거
+            st.warning(item)
     else:
-        st.success("🎉 오늘은 투입할 약제나 영양제가 없어. 식물들과 평화로운 하루를 보내!")
-
-# ---------------------
-# 식물관리 (수정 기능 추가됨)
-# ---------------------
-
-with tabs[2]:
-
-    st.subheader("식물 추가")
-
-    col1,col2=st.columns(2)
-
-    with col1:
-        category=st.selectbox("카테고리",CATEGORIES)
-
-    with col2:
-        name=st.text_input("식물 이름")
-
-    if st.button("추가") and name:
-
-        st.session_state.data["plants"].append({
-            "name":name,
-            "category":category
-        })
-
-        save_data()
-        st.rerun()
+        st.success("영양제나 약제 투입 일정이 없습니다.")
 
     st.divider()
 
+    # 2. 계절별 전정/순따기 가이드 (신규)
+    st.markdown("#### ✂️ 계절별 전정 및 순따기 가이드")
+    month = today.month
+    
+    guides = []
+    if month in [3, 4, 5]: # 봄
+        guides.append("🌸 **봄 전정:** 수국은 새 잎이 나기 전 죽은 가지를 정리하세요.")
+        guides.append("🌱 **아키메네스:** 싹이 5~10cm 정도 자라면 첫 **순따기(Pinching)**를 해서 풍성하게 만드세요.")
+        guides.append("🌿 **가든멈:** 5월 말까지 순따기를 반복하면 가을에 꽃을 훨씬 많이 봅니다.")
+    elif month in [6, 7, 8]: # 여름
+        guides.append("☀️ **장마 대비:** 스카푸와 베고니아는 통풍을 위해 노화된 아래 잎을 정리해 주세요.")
+        guides.append("✂️ **수국:** 꽃이 진 직후(7월 중순 이전)에 전정을 마쳐야 내년 꽃눈이 생깁니다.")
+    elif month in [9, 10, 11]: # 가을
+        guides.append("🍂 **사랑초:** 본격적인 성장이 시작되니 웃자란 줄기를 정리하고 햇빛을 많이 보여주세요.")
+    elif month in [12, 1, 2]: # 겨울
+        guides.append("❄️ **동면 준비:** 아키메네스와 구근류는 지상부가 마르면 줄기를 바짝 잘라 보관하세요.")
+
+    for guide in guides:
+        st.info(guide)
+
+# ---------------------
+# 식물관리 (수정/삭제 유지)
+# ---------------------
+
+with tabs[2]:
+    st.subheader("식물 추가")
+    col1,col2=st.columns(2)
+    with col1: category=st.selectbox("카테고리",CATEGORIES)
+    with col2: name=st.text_input("식물 이름")
+    if st.button("추가") and name:
+        st.session_state.data["plants"].append({"name":name,"category":category})
+        save_data(); st.rerun()
+
+    st.divider()
     search=st.text_input("🔍 식물 검색")
-
     plants=st.session_state.data["plants"]
-
-    if search:
-        plants=[p for p in plants if search.lower() in p["name"].lower()]
+    if search: plants=[p for p in plants if search.lower() in p["name"].lower()]
 
     for i,p in enumerate(plants):
-
-        # 레이아웃을 3칸으로 나누어 수정/삭제 버튼 배치
         col1, col2, col3 = st.columns([6, 1, 1])
-
-        with col1:
-            st.write(f"🌱 {p['category']} - {p['name']}")
-
+        with col1: st.write(f"🌱 {p['category']} - {p['name']}")
         with col2:
-            # 상태 관리를 통해 수정 창을 열고 닫음
             if st.button("수정", key=f"edit_btn_{i}"):
                 st.session_state[f"edit_mode_{i}"] = not st.session_state.get(f"edit_mode_{i}", False)
-
         with col3:
             if st.button("삭제", key=f"del_{i}"):
-                st.session_state.data["plants"].remove(p)
-                save_data()
-                st.rerun()
+                st.session_state.data["plants"].remove(p); save_data(); st.rerun()
 
-        # 수정 버튼을 눌렀을 때 나타나는 입력창
         if st.session_state.get(f"edit_mode_{i}", False):
             with st.expander("📝 식물 정보 수정", expanded=True):
-                new_category = st.selectbox(
-                    "새 카테고리", 
-                    CATEGORIES, 
-                    index=CATEGORIES.index(p['category']) if p['category'] in CATEGORIES else 0,
-                    key=f"new_cat_{i}"
-                )
+                new_category = st.selectbox("새 카테고리", CATEGORIES, 
+                                          index=CATEGORIES.index(p['category']) if p['category'] in CATEGORIES else 0,
+                                          key=f"new_cat_{i}")
                 new_name = st.text_input("새 식물 이름", value=p['name'], key=f"new_name_{i}")
-                
                 if st.button("저장", key=f"save_btn_{i}"):
-                    p['category'] = new_category
-                    p['name'] = new_name
+                    p['category'] = new_category; p['name'] = new_name
                     st.session_state[f"edit_mode_{i}"] = False
-                    save_data()
-                    st.rerun()
+                    save_data(); st.rerun()
 
 # ---------------------
 # 영양제 기록
 # ---------------------
 
 with tabs[3]:
-
     if st.session_state.data["plants"]:
-
         plant_names=[p["name"] for p in st.session_state.data["plants"]]
-
         plant=st.selectbox("식물 선택",plant_names)
-
         fert=st.multiselect("영양제 및 약제",FERTS)
-
         note=st.text_input("메모")
-
         if st.button("기록 저장"):
-
-            log={
-            "date":datetime.now().strftime("%Y-%m-%d"),
-            "plant":plant,
-            "fert":fert,
-            "note":note
-            }
-
+            log={"date":datetime.now().strftime("%Y-%m-%d"),"plant":plant,"fert":fert,"note":note}
             st.session_state.data["logs"].append(log)
-
-            save_data()
-
-            st.success("기록 저장 완료")
-
+            save_data(); st.success("기록 저장 완료")
     st.divider()
-
     for log in st.session_state.data["logs"][::-1]:
-
-        st.info(
-        f"{log['date']} | {log['plant']} | {','.join(log['fert'])}"
-        )
+        st.info(f"{log['date']} | {log['plant']} | {','.join(log['fert'])}")
 
 # ---------------------
 # 분갈이 계산기
 # ---------------------
 
 with tabs[4]:
-
     plant=st.selectbox("식물 종류",list(RECIPES.keys()))
-
     pot=st.selectbox("화분 크기",list(POTS.keys()))
-
     count=st.number_input("개수",1,200)
-
     if st.button("계산"):
-
         volume=POTS[pot]*count
-
         st.write(f"총 흙 : {volume} L")
-
         recipe=RECIPES[plant]
-
         for k,v in recipe.items():
-
-            if k in ["바로커","산야초","질석","훈탄"]:
+            if k in ["반에그먼트","바로커","산야초","질석","훈탄"]:
                 st.write(f"{k} : {v*volume/1000:.2f} L")
-
             else:
                 st.write(f"{k} : {v*volume:.1f} g")
 
@@ -301,18 +250,12 @@ with tabs[4]:
 # ---------------------
 
 with tabs[5]:
-
     plant=st.selectbox("식물",list(RECIPES.keys()))
-
     recipe=RECIPES[plant]
-
     st.write("1L 기준")
-
     for k,v in recipe.items():
-
-        if k in ["바로커","산야초","질석","훈탄"]:
+        if k in ["반에그먼트","바로커","산야초","질석","훈탄"]:
             st.write(f"{k} : {v} ml")
-
         else:
             st.write(f"{k} : {v} g")
 
@@ -321,21 +264,10 @@ with tabs[5]:
 # ---------------------
 
 with tabs[6]:
-
     month=datetime.now().month
-
-    if month in [3,4,5]:
-        light="봄 : 식물등 6시간"
-
-    elif month in [6,7,8]:
-        light="여름 : 식물등 4~5시간"
-
-    elif month in [9,10,11]:
-        light="가을 : 식물등 6시간"
-
-    else:
-        light="겨울 : 식물등 9~10시간"
-
+    if month in [3,4,5]: light="봄 : 식물등 6시간"
+    elif month in [6,7,8]: light="여름 : 식물등 4~5시간"
+    elif month in [9,10,11]: light="가을 : 식물등 6시간"
+    else: light="겨울 : 식물등 9~10시간"
     st.info(light)
-
     st.write("환경 : 정남향 베란다 + 소나무 차광")
