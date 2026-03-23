@@ -146,19 +146,34 @@ with tabs[5]:
     col1, col2, col3 = st.columns(3)
     with col1:
         st.markdown("**하단 (대형 구근)**")
-        bottom_layer = st.multiselect("구근 선택", ["튤립 (카니발 드 니스 등)", "수선화", "알리움", "히아신스 (스칼렛 펄 등)"])
+        bottom_layer = st.multiselect("하단 구근 선택", ["튤립 (카니발 드 니스 등)", "수선화", "알리움", "히아신스 (스칼렛 펄 등)"])
     with col2:
         st.markdown("**중단 (중간 구근)**")
-        middle_layer = st.multiselect("구근 선택", ["원종 튤립", "히아신스", "미니 수선화"])
+        middle_layer = st.multiselect("중단 구근 선택", ["원종 튤립", "히아신스", "미니 수선화"])
     with col3:
         st.markdown("**상단 (소형 구근)**")
-        top_layer = st.multiselect("구근 선택", ["무스카리", "크로커스", "스노우드롭", "사랑초 (옵투사 등)"])
+        top_layer = st.multiselect("상단 구근 선택", ["무스카리", "크로커스", "스노우드롭", "사랑초 (옵투사 등)"])
         
-    if st.button("🌱 라자냐 화분 조합 보기"):
-        st.success(f"**하단:** {', '.join(bottom_layer) if bottom_layer else '비어있음'}\n\n"
-                   f"**중단:** {', '.join(middle_layer) if middle_layer else '비어있음'}\n\n"
-                   f"**상단:** {', '.join(top_layer) if top_layer else '비어있음'}\n\n"
-                   "봄 내내 화려하게 피어나는 완벽한 라자냐 조합이네요!")
+    st.markdown("---")
+    
+    # 선택한 구근들을 하나의 텍스트로 묶기
+    bottom_str = ', '.join(bottom_layer) if bottom_layer else '비어있음'
+    middle_str = ', '.join(middle_layer) if middle_layer else '비어있음'
+    top_str = ', '.join(top_layer) if top_layer else '비어있음'
+    
+    combo_text = f"하단: {bottom_str} / 중단: {middle_str} / 상단: {top_str}"
+    
+    st.success(f"**현재 조합 미리보기**\n\n{combo_text}")
+    
+    # 구글 시트에 저장하는 버튼
+    if st.button("☁️ 이 조합을 구글 시트에 기록하기"):
+        if not bottom_layer and not middle_layer and not top_layer:
+            st.warning("구근을 하나 이상 선택해주세요!")
+        else:
+            # 기존 영양제 기록 함수를 재활용하여 logs 시트에 저장
+            add_log(datetime.now().strftime("%Y-%m-%d"), "추식구근(라자냐)", combo_text)
+            st.balloons()  # 성공 시 풍선 애니메이션 효과!
+            st.success("올해의 구근 라자냐 조합이 구글 시트에 안전하게 기록되었습니다! 🌷")
 
 with tabs[6]:
     st.subheader("🧪 10L 기준 정밀 흙/비료 대용량 배합 (바로커 7:3)")
