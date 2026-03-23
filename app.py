@@ -177,13 +177,13 @@ with tabs[5]:
 
 with tabs[6]:
     st.subheader("🧪 대용량 정밀 흙 배합기 (상토선택 & 영양/살충)")
-    st.write("대용량 흙 배합이 필요할 때 사용하는 정확한 기준점입니다. (유기질 30 : 무기질 70 비율 베이스)")
+    st.write("대용량 흙 배합이 필요할 때 사용하는 정확한 기준점입니다. (상토 70 : 무기질 30 비율 베이스)")
 
     # --- 입력창 구역 ---
     col_in1, col_in2 = st.columns(2)
     
     with col_in1:
-        # [신규 기능] 베이스 상토를 선택하는 드롭다운 메뉴
+        # 베이스 상토 선택
         selected_base_soil = st.selectbox("현재 사용할 베이스 상토 선택", ["바로커", "반에그먼트 실내용"])
         
     with col_in2:
@@ -192,20 +192,17 @@ with tabs[6]:
     st.markdown("---")
 
     # --- 정밀 계산 구역 ---
-    # 1. 메인 재료 (3:7 비율 가정)
-    baroker_vol = base_volume * 0.3
-    inorganic_vol = base_volume * 0.7
+    # 1. 메인 재료 (7:3 비율 정상화!)
+    base_soil_vol = base_volume * 0.7
+    inorganic_vol = base_volume * 0.3
     
     # 2. 기존 영양 부자재 (10L당 권장량 비율 유지)
     huntan = base_volume * 0.1
     magamp_k = base_volume * 3
     osmocote = base_volume * 2
     
-    # 3. [신규 기능] 농약/살충제 정밀 계산 (보내주신 이미지 기준)
-    # 토탈싹: 상토 30L당 30g -> 1L당 1g
+    # 3. 농약/살충제 정밀 계산 (토탈싹 1g/L, 벅스킹 1.5g/L)
     total_sak_g = base_volume * 1
-    
-    # 벅스킹: 일반적인 이미다클로프리드 입제 화분 배합 기준 -> 1L당 1.5g (윤슬님 기준에 따라 수정 가능)
     bugs_king_g = base_volume * 1.5
     
     # --- 결과 출력 구역 ---
@@ -214,9 +211,9 @@ with tabs[6]:
     col_res1, col_res2, col_res3 = st.columns(3)
     
     with col_res1:
-        st.markdown("#### 🪵 메인 재료 (3:7)")
-        st.metric(label=f"베이스 {selected_base_soil} (30%)", value=f"{baroker_vol:.1f} L")
-        st.metric(label="산야초 등 무기질 (70%)", value=f"{inorganic_vol:.1f} L")
+        st.markdown("#### 🪵 메인 재료 (7:3)")
+        st.metric(label=f"베이스 {selected_base_soil} (70%)", value=f"{base_soil_vol:.1f} L")
+        st.metric(label="산야초 등 무기질 (30%)", value=f"{inorganic_vol:.1f} L")
         
     with col_res2:
         st.markdown("#### 💊 영양 부자재")
@@ -226,11 +223,9 @@ with tabs[6]:
 
     with col_res3:
         st.markdown("#### 🛡️ 살충/방제 부자재")
-        # 이미지 분석 기준 반영
         st.write(f"- **토탈싹 (토양살충)**: {total_sak_g:.0f} g")
         st.write(f"- **벅스킹 (진딧물)**: {bugs_king_g:.1f} g")
         st.warning(f"⚠️ 살충제는 상토 혼합 시 정밀 계량이 중요합니다. (벅스킹은 상토 1L당 1.5g 혼합 기준)")
-
 
 with tabs[7]:
     st.subheader("☀️ 계절별 채광 및 식물등 스케줄러")
