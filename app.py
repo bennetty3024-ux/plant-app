@@ -176,29 +176,61 @@ with tabs[5]:
             st.success("올해의 구근 라자냐 조합이 구글 시트에 안전하게 기록되었습니다! 🌷")
 
 with tabs[6]:
-    st.subheader("🧪 10L 기준 정밀 흙/비료 대용량 배합 (바로커 7:3)")
-    st.write("대용량 흙 배합이 필요할 때 사용하는 정확한 기준점입니다. (유기질 30 : 무기질 70)")
+    st.subheader("🧪 대용량 정밀 흙 배합기 (상토선택 & 영양/살충)")
+    st.write("대용량 흙 배합이 필요할 때 사용하는 정확한 기준점입니다. (유기질 30 : 무기질 70 비율 베이스)")
+
+    # --- 입력창 구역 ---
+    col_in1, col_in2 = st.columns(2)
     
-    base_volume = st.number_input("전체 배합량 기준 (리터)", min_value=1.0, value=10.0, step=1.0)
-    
-    # 7:3 바로커/무기질 공식
+    with col_in1:
+        # [신규 기능] 베이스 상토를 선택하는 드롭다운 메뉴
+        selected_base_soil = st.selectbox("현재 사용할 베이스 상토 선택", ["바로커", "반에그먼트 실내용"])
+        
+    with col_in2:
+        base_volume = st.number_input("전체 배합량 기준 (리터)", min_value=1.0, value=10.0, step=1.0)
+
+    st.markdown("---")
+
+    # --- 정밀 계산 구역 ---
+    # 1. 메인 재료 (3:7 비율 가정)
     baroker_vol = base_volume * 0.3
     inorganic_vol = base_volume * 0.7
     
-    # 10L 기준 추가 부자재 권장량
+    # 2. 기존 영양 부자재 (10L당 권장량 비율 유지)
     huntan = base_volume * 0.1
     magamp_k = base_volume * 3
     osmocote = base_volume * 2
     
-    st.markdown("### 📊 정밀 배합 레시피")
-    col_a, col_b = st.columns(2)
-    with col_a:
-        st.metric(label="바로커 상토 (30%)", value=f"{baroker_vol:.1f} L")
+    # 3. [신규 기능] 농약/살충제 정밀 계산 (보내주신 이미지 기준)
+    # 토탈싹: 상토 30L당 30g -> 1L당 1g
+    total_sak_g = base_volume * 1
+    
+    # 벅스킹: 일반적인 이미다클로프리드 입제 화분 배합 기준 -> 1L당 1.5g (윤슬님 기준에 따라 수정 가능)
+    bugs_king_g = base_volume * 1.5
+    
+    # --- 결과 출력 구역 ---
+    st.markdown(f"### 📊 **{selected_base_soil}** 베이스 정밀 레시피 (총 {base_volume:.1f}L)")
+
+    col_res1, col_res2, col_res3 = st.columns(3)
+    
+    with col_res1:
+        st.markdown("#### 🪵 메인 재료 (3:7)")
+        st.metric(label=f"베이스 {selected_base_soil} (30%)", value=f"{baroker_vol:.1f} L")
         st.metric(label="산야초 등 무기질 (70%)", value=f"{inorganic_vol:.1f} L")
-    with col_b:
-        st.metric(label="훈탄 (약 10% 추가)", value=f"{huntan:.1f} L")
-        st.metric(label="마감프K (중소립)", value=f"{magamp_k:.0f} g")
-        st.metric(label="오스모코트", value=f"{osmocote:.0f} g")
+        
+    with col_res2:
+        st.markdown("#### 💊 영양 부자재")
+        st.write(f"- **훈탄 (약 10% 추가)**: {huntan:.1f} L")
+        st.write(f"- **마감프K (중소립)**: {magamp_k:.0f} g")
+        st.write(f"- **오스모코트**: {osmocote:.0f} g")
+
+    with col_res3:
+        st.markdown("#### 🛡️ 살충/방제 부자재")
+        # 이미지 분석 기준 반영
+        st.write(f"- **토탈싹 (토양살충)**: {total_sak_g:.0f} g")
+        st.write(f"- **벅스킹 (진딧물)**: {bugs_king_g:.1f} g")
+        st.warning(f"⚠️ 살충제는 상토 혼합 시 정밀 계량이 중요합니다. (벅스킹은 상토 1L당 1.5g 혼합 기준)")
+
 
 with tabs[7]:
     st.subheader("☀️ 계절별 채광 및 식물등 스케줄러")
